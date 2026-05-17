@@ -34,6 +34,8 @@
 #include <Renderer/TextureManager.hpp>
 #include <Renderer/TransitionShaderManager.hpp>
 
+#include <Renderer/Backend/GraphicsBackendFactory.hpp>
+
 #include <UserSprites/SpriteManager.hpp>
 
 namespace libprojectM {
@@ -189,19 +191,13 @@ void ProjectM::RenderFrame(uint32_t targetFramebufferObject /*= 0*/)
     // ToDo: Call the to-be-implemented render method in Renderer
     m_activePreset->RenderFrame(audioData, renderContext);
 
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(targetFramebufferObject));
-    glViewport(0, 0, renderContext.viewportSizeX, renderContext.viewportSizeY);
+    m_backend->BindDrawFramebufferRaw(targetFramebufferObject);
+    m_backend->SetViewport(0, 0, renderContext.viewportSizeX, renderContext.viewportSizeY);
 
-#ifdef USE_GLES
-    // On WebGL2 / Chrome ANGLE, the default framebuffer's draw buffer must
-    // be explicitly set to GL_BACK after preset rendering, which may leave
-    // per-FBO draw buffer state that leaks into FBO 0 on some drivers.
     if (targetFramebufferObject == 0)
     {
-        GLenum backBuf = GL_BACK;
-        glDrawBuffers(1, &backBuf);
+        m_backend->EnsureDefaultDrawBuffers();
     }
-#endif
 
     if (m_transition != nullptr && m_transitioningPreset != nullptr)
     {
@@ -221,6 +217,9 @@ void ProjectM::RenderFrame(uint32_t targetFramebufferObject /*= 0*/)
 
 void ProjectM::Initialize()
 {
+    // Create the graphics backend before any GL operations.
+    m_backend = Renderer::Backend::CreateGraphicsBackend();
+
     // Check OpenGL first before allocating any additional memory.
     CheckGLSLVersion();
 
@@ -595,6 +594,7 @@ auto ProjectM::GetRenderContext() -> Renderer::RenderContext
 
     ctx.textureManager = m_textureManager.get();
     ctx.shaderCache = m_shaderCache.get();
+    ctx.backend = m_backend.get();
 
     if (m_transition)
     {

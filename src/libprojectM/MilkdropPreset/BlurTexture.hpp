@@ -118,6 +118,7 @@ private:
     std::shared_ptr<Renderer::Sampler> m_blurSampler;                               //!< The blur sampler.
     std::array<std::shared_ptr<Renderer::Texture>, NumBlurTextures> m_blurTextures; //!< The blur textures for each pass.
     BlurLevel m_blurLevel{BlurLevel::None};                                         //!< Current blur level.
+    Renderer::Backend::GraphicsBackend* m_backend{nullptr};                         //!< Graphics backend pointer.
 };
 
 } // namespace MilkdropPreset

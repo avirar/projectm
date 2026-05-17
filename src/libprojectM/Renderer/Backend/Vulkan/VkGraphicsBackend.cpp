@@ -189,7 +189,13 @@ void VkGraphicsBackend::SetConstantVertexAttrib4f(unsigned int, float, float, fl
 void VkGraphicsBackend::EnableVertexAttribArray(unsigned int, bool) {}
 
 void VkGraphicsBackend::BindDefaultFramebuffer() {}
+void VkGraphicsBackend::BindDrawFramebufferRaw(uint32_t) {}
+void VkGraphicsBackend::BindReadFramebufferRaw(uint32_t) {}
+auto VkGraphicsBackend::GetDrawFramebufferBindingRaw() -> uint32_t { return 0; }
+auto VkGraphicsBackend::GetReadFramebufferBindingRaw() -> uint32_t { return 0; }
 void VkGraphicsBackend::CopyFramebufferToTexture(int, int, int, int, int, int, int, int) {}
+void VkGraphicsBackend::EnsureDefaultDrawBuffers() {}
+void VkGraphicsBackend::SetBoundTextureWrap(SamplerWrap, SamplerWrap) {}
 
 auto VkGraphicsBackend::GetShaderLanguageVersion() const -> GlslVersion
 {

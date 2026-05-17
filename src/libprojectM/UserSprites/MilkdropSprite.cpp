@@ -8,6 +8,7 @@
 
 #include <Preset.hpp>
 
+#include <Renderer/Backend/GraphicsBackend.hpp>
 #include <Renderer/BlendMode.hpp>
 #include <Renderer/ShaderCache.hpp>
 #include <Renderer/TextureManager.hpp>
@@ -235,7 +236,7 @@ void MilkdropSprite::Draw(const Audio::FrameAudioData& audioData,
 
     m_mesh.Update();
 
-    glVertexAttrib4f(1, r, g, b, a);
+    renderContext.backend->SetConstantVertexAttrib4f(1, r, g, b, a);
 
     switch (blendMode)
     {
@@ -276,7 +277,7 @@ void MilkdropSprite::Draw(const Audio::FrameAudioData& audioData,
         }
 
         // Reset to original FBO
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(outputFramebufferObject));
+        renderContext.backend->BindDrawFramebufferRaw(outputFramebufferObject);
     }
 
     m_texture->Unbind(0);

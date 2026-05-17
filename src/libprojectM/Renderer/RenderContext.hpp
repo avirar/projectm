@@ -12,6 +12,10 @@ namespace Renderer {
 class ShaderCache;
 class TextureManager;
 
+namespace Backend {
+class GraphicsBackend;
+} // namespace Backend
+
 /**
  * @brief Holds all global data of the current rendering context, which can change from frame to frame.
  */
@@ -37,7 +41,8 @@ public:
     float texelOffsetY{0.0f}; //!< Vertical texel offset in the warp shader.
 
     TextureManager* textureManager{nullptr}; //!< Holds all loaded textures for shader access.
-    ShaderCache* shaderCache{nullptr}; //!< The shader chace of this projectM instance.
+    ShaderCache* shaderCache{nullptr}; //!< The shader shace of this projectM instance.
+    Backend::GraphicsBackend* backend{nullptr}; //!< The active graphics backend for rendering.
 };
 
 } // namespace Renderer

@@ -55,8 +55,16 @@ public:
 
     //=== Framebuffer =================================================
     virtual void BindDefaultFramebuffer() = 0;
+    virtual void BindDrawFramebufferRaw(uint32_t fboId) = 0;
+    virtual void BindReadFramebufferRaw(uint32_t fboId) = 0;
+    virtual auto GetDrawFramebufferBindingRaw() -> uint32_t = 0;
+    virtual auto GetReadFramebufferBindingRaw() -> uint32_t = 0;
     virtual void CopyFramebufferToTexture(int srcX0, int srcY0, int srcX1, int srcY1,
                                           int dstX0, int dstY0, int dstWidth, int dstHeight) = 0;
+    virtual void EnsureDefaultDrawBuffers() = 0;
+
+    //=== Texture state ===============================================
+    virtual void SetBoundTextureWrap(SamplerWrap wrapS, SamplerWrap wrapT) = 0;
 
     //=== Shader language version =====================================
     struct GlslVersion { int major{}; int minor{}; };

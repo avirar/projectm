@@ -1,5 +1,6 @@
 #include "Filters.hpp"
 
+#include <Renderer/Backend/GraphicsBackend.hpp>
 #include <Renderer/BlendMode.hpp>
 
 using libprojectM::Renderer::BlendMode;
@@ -31,7 +32,7 @@ void Filters::Draw()
     shader->SetUniformMat4x4("vertex_transformation", PresetState::orthogonalProjection);
     shader->SetUniformFloat("vertex_point_size", 1.0f);
 
-    glVertexAttrib4f(1, 1.0, 1.0, 1.0, 1.0);
+    m_presetState.renderContext.backend->SetConstantVertexAttrib4f(1, 1.0, 1.0, 1.0, 1.0);
 
     if (m_presetState.brighten)
     {

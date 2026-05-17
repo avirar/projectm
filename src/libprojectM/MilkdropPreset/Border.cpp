@@ -2,6 +2,7 @@
 
 #include "PerFrameContext.hpp"
 
+#include <Renderer/Backend/GraphicsBackend.hpp>
 #include <Renderer/BlendMode.hpp>
 
 namespace libprojectM {
@@ -52,7 +53,7 @@ void Border::Draw(const PerFrameContext& presetPerFrameContext)
 
         if (a > 0.001f)
         {
-            glVertexAttrib4f(1, r, g, b, a);
+            m_presetState.renderContext.backend->SetConstantVertexAttrib4f(1, r, g, b, a);
 
             float innerRadius = (border == 0) ? 1.0f - outerBorderSize : 1.0f - outerBorderSize - innerBorderSize;
             float outerRadius = (border == 0) ? 1.0f : 1.0f - outerBorderSize;

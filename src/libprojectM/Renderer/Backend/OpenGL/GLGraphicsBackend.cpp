@@ -60,10 +60,12 @@ void GLGraphicsBackend::SetLineWidth(float width)
 
 void GLGraphicsBackend::SetLineSmoothing(bool enable)
 {
+#ifndef USE_GLES
     if (enable)
         glEnable(GL_LINE_SMOOTH);
     else
         glDisable(GL_LINE_SMOOTH);
+#endif
 }
 
 void GLGraphicsBackend::SetScissor(int x, int y, int width, int height, bool enable)
@@ -98,11 +100,51 @@ void GLGraphicsBackend::BindDefaultFramebuffer()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-void GLGraphicsBackend::CopyFramebufferToTexture(int srcX0, int srcY0, int srcX1, int srcY1,
-                                                 int dstX0, int dstY0, int dstWidth, int dstHeight)
+void GLGraphicsBackend::BindDrawFramebufferRaw(uint32_t fboId)
 {
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(fboId));
+}
+
+void GLGraphicsBackend::BindReadFramebufferRaw(uint32_t fboId)
+{
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(fboId));
+}
+
+auto GLGraphicsBackend::GetDrawFramebufferBindingRaw() -> uint32_t
+{
+    GLint result{};
+    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &result);
+    return static_cast<uint32_t>(result);
+}
+
+auto GLGraphicsBackend::GetReadFramebufferBindingRaw() -> uint32_t
+{
+    GLint result{};
+    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &result);
+    return static_cast<uint32_t>(result);
+}
+
+void GLGraphicsBackend::CopyFramebufferToTexture(int srcX0, int srcY0, int srcX1, int srcY1,
+                                                  int dstX0, int dstY0, int dstWidth, int dstHeight)
+{
+    (void)dstWidth;
+    (void)dstHeight;
     glCopyTexSubImage2D(GL_TEXTURE_2D, 0, dstX0, dstY0, srcX0, srcY0,
                         srcX1 - srcX0, srcY1 - srcY0);
+}
+
+void GLGraphicsBackend::EnsureDefaultDrawBuffers()
+{
+#ifdef USE_GLES
+    GLenum backBuf = GL_BACK;
+    glDrawBuffers(1, &backBuf);
+#endif
+}
+
+void GLGraphicsBackend::SetBoundTextureWrap(SamplerWrap wrapS, SamplerWrap wrapT)
+{
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, ToGLSamplerWrap(wrapS));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, ToGLSamplerWrap(wrapT));
 }
 
 auto GLGraphicsBackend::GetShaderLanguageVersion() const -> GlslVersion

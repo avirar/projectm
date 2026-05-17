@@ -5,6 +5,7 @@
 
 #include "MilkdropStaticShaders.hpp"
 
+#include <Renderer/Backend/GraphicsBackend.hpp>
 #include <Renderer/BlendMode.hpp>
 #include <Renderer/Point.hpp>
 #include <Renderer/ShaderCache.hpp>
@@ -50,6 +51,8 @@ BlurTexture::BlurTexture()
 
 void BlurTexture::Initialize(const Renderer::RenderContext& renderContext)
 {
+    m_backend = renderContext.backend;
+
     auto staticShaders = libprojectM::MilkdropPreset::MilkdropStaticShaders::Get();
 
     // Load/compile shader sources
@@ -144,10 +147,8 @@ void BlurTexture::Update(const Renderer::Texture& sourceTexture, const PerFrameC
     bias[2] = -tempMin * scale[2];
 
     // Remember previously bound framebuffer
-    GLint origReadFramebuffer;
-    GLint origDrawFramebuffer;
-    glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &origReadFramebuffer);
-    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &origDrawFramebuffer);
+    auto origReadFramebuffer = m_backend->GetReadFramebufferBindingRaw();
+    auto origDrawFramebuffer = m_backend->GetDrawFramebufferBindingRaw();
 
     m_blurFramebuffer.Bind(0);
 
@@ -178,7 +179,7 @@ void BlurTexture::Update(const Renderer::Texture& sourceTexture, const PerFrameC
         blurShader->Bind();
         blurShader->SetUniformInt("texture_sampler", 0);
 
-        glViewport(0, 0, m_blurTextures[pass]->Width(), m_blurTextures[pass]->Height());
+        m_backend->SetViewport(0, 0, m_blurTextures[pass]->Width(), m_blurTextures[pass]->Height());
 
         // hook up correct source texture - assume there is only one, at stage 0
         if (pass == 0)
@@ -259,7 +260,10 @@ void BlurTexture::Update(const Renderer::Texture& sourceTexture, const PerFrameC
 
         // Save to blur texture
         m_blurTextures[pass]->Bind(0);
-        glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, m_blurTextures[pass]->Width(), m_blurTextures[pass]->Height());
+        m_backend->CopyFramebufferToTexture(0, 0,
+                                            m_blurTextures[pass]->Width(), m_blurTextures[pass]->Height(),
+                                            0, 0,
+                                            m_blurTextures[pass]->Width(), m_blurTextures[pass]->Height());
         m_blurTextures[pass]->Unbind(0);
     }
 
@@ -267,9 +271,9 @@ void BlurTexture::Update(const Renderer::Texture& sourceTexture, const PerFrameC
     Renderer::BlendMode::Set(false, Renderer::BlendMode::Function::SourceAlpha, Renderer::BlendMode::Function::OneMinusSourceAlpha);
 
     // Bind previous framebuffer and reset viewport size
-    glBindFramebuffer(GL_READ_FRAMEBUFFER, origReadFramebuffer);
-    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, origDrawFramebuffer);
-    glViewport(0, 0, sourceTexture.Width(), sourceTexture.Height());
+    m_backend->BindReadFramebufferRaw(origReadFramebuffer);
+    m_backend->BindDrawFramebufferRaw(origDrawFramebuffer);
+    m_backend->SetViewport(0, 0, sourceTexture.Width(), sourceTexture.Height());
 
     Renderer::Shader::Unbind();
 }

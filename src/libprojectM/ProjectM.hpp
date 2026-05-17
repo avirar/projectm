@@ -42,6 +42,10 @@ class Renderer;
 class TextureManager;
 class ShaderCache;
 class TransitionShaderManager;
+
+namespace Backend {
+class GraphicsBackend;
+} // namespace Backend
 } // namespace Renderer
 
 namespace UserSprites {
@@ -331,6 +335,7 @@ private:
     std::unique_ptr<Renderer::PresetTransition> m_transition;                     //!< Transition effect used for blending.
     std::unique_ptr<TimeKeeper> m_timeKeeper;                                     //!< Keeps the different timers used to render and switch presets.
     std::unique_ptr<UserSprites::SpriteManager> m_spriteManager;                  //!< Manages all types of user sprites.
+    std::shared_ptr<Renderer::Backend::GraphicsBackend> m_backend;                 //!< The active graphics backend.
 };
 
 } // namespace libprojectM

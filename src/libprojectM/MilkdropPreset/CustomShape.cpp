@@ -2,6 +2,7 @@
 
 #include "PresetFileParser.hpp"
 
+#include <Renderer/Backend/GraphicsBackend.hpp>
 #include <Renderer/BlendMode.hpp>
 #include <Renderer/TextureManager.hpp>
 
@@ -174,8 +175,7 @@ void CustomShape::Draw()
                 }
             }
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+            m_presetState.renderContext.backend->SetBoundTextureWrap(Renderer::Backend::SamplerWrap::Repeat, Renderer::Backend::SamplerWrap::Repeat);
 
             auto& uvs = m_fillMesh.UVs();
 
@@ -225,14 +225,15 @@ void CustomShape::Draw()
             shader->SetUniformMat4x4("vertex_transformation", PresetState::orthogonalProjection);
             shader->SetUniformFloat("vertex_point_size", 1.0f);
 
-            glVertexAttrib4f(1,
-                             static_cast<float>(*m_perFrameContext.border_r),
-                             static_cast<float>(*m_perFrameContext.border_g),
-                             static_cast<float>(*m_perFrameContext.border_b),
-                             static_cast<float>(*m_perFrameContext.border_a));
-            glLineWidth(1);
+            auto* backend = m_presetState.renderContext.backend;
+            backend->SetConstantVertexAttrib4f(1,
+                              static_cast<float>(*m_perFrameContext.border_r),
+                              static_cast<float>(*m_perFrameContext.border_g),
+                              static_cast<float>(*m_perFrameContext.border_b),
+                              static_cast<float>(*m_perFrameContext.border_a));
+            backend->SetLineWidth(1);
 #ifndef USE_GLES
-            glEnable(GL_LINE_SMOOTH);
+            backend->SetLineSmoothing(true);
 #endif
 
             const auto iterations = m_thickOutline ? 4 : 1;
@@ -282,7 +283,7 @@ void CustomShape::Draw()
     Renderer::Shader::Unbind();
 
 #ifndef USE_GLES
-    glDisable(GL_LINE_SMOOTH);
+    m_presetState.renderContext.backend->SetLineSmoothing(false);
 #endif
     Renderer::BlendMode::SetBlendActive(false);
 }

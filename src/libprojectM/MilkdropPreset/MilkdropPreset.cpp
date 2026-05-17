@@ -26,6 +26,7 @@
 #include "PresetFileParser.hpp"
 
 #include <Logging.hpp>
+#include <Renderer/Backend/GraphicsBackend.hpp>
 
 namespace libprojectM {
 namespace MilkdropPreset {
@@ -92,7 +93,10 @@ void MilkdropPreset::RenderFrame(const libprojectM::Audio::FrameAudioData& audio
     // First evaluate per-frame code
     PerFrameUpdate();
 
-    glViewport(0, 0, renderContext.viewportSizeX, renderContext.viewportSizeY);
+    if (m_state.renderContext.backend)
+    {
+        m_state.renderContext.backend->SetViewport(0, 0, renderContext.viewportSizeX, renderContext.viewportSizeY);
+    }
 
     m_framebuffer.Bind(m_previousFrameBuffer);
     // Motion vector field. Drawn to the previous frame texture before warping it.

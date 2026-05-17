@@ -1,7 +1,9 @@
 #include "MotionVectors.hpp"
 
 #include "MilkdropStaticShaders.hpp"
+#include "PresetState.hpp"
 
+#include <Renderer/Backend/GraphicsBackend.hpp>
 #include <Renderer/BlendMode.hpp>
 #include <Renderer/ShaderCache.hpp>
 #include <Renderer/TextureManager.hpp>
@@ -75,15 +77,16 @@ void MotionVectors::Draw(const PerFrameContext& presetPerFrameContext, std::shar
 
     motionTexture->Bind(0, m_sampler);
 
-    glVertexAttrib4f(1,
+    auto* backend = m_presetState.renderContext.backend;
+    backend->SetConstantVertexAttrib4f(1,
                      static_cast<float>(*presetPerFrameContext.mv_r),
                      static_cast<float>(*presetPerFrameContext.mv_g),
                      static_cast<float>(*presetPerFrameContext.mv_b),
                      static_cast<float>(*presetPerFrameContext.mv_a));
 
-    glLineWidth(1);
+    backend->SetLineWidth(1);
 #ifndef USE_GLES
-    glEnable(GL_LINE_SMOOTH);
+    backend->SetLineSmoothing(true);
 #endif
 
     auto& lineVertices = m_motionVectorMesh.Vertices();
@@ -117,7 +120,7 @@ void MotionVectors::Draw(const PerFrameContext& presetPerFrameContext, std::shar
     Renderer::Shader::Unbind();
 
 #ifndef USE_GLES
-    glDisable(GL_LINE_SMOOTH);
+    m_presetState.renderContext.backend->SetLineSmoothing(false);
 #endif
 
     Renderer::BlendMode::SetBlendActive(false);

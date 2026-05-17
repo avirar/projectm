@@ -3,6 +3,7 @@
 #include "PerFrameContext.hpp"
 #include "PresetFileParser.hpp"
 
+#include <Renderer/Backend/GraphicsBackend.hpp>
 #include <Renderer/BlendMode.hpp>
 
 #include <algorithm>
@@ -159,10 +160,9 @@ void CustomWaveform::Draw(const PerFrameContext& presetPerFrameContext)
 
     SmoothWave(points, colors);
 
-#ifndef USE_GLES
-    glDisable(GL_LINE_SMOOTH);
-#endif
-    glLineWidth(1);
+    auto* backend = m_presetState.renderContext.backend;
+    backend->SetLineSmoothing(false);
+    backend->SetLineWidth(1);
 
     // Additive wave drawing (vice overwrite)
     if (m_additive)

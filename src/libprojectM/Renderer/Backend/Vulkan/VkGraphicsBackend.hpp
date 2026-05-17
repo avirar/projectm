@@ -49,8 +49,15 @@ public:
     void EnableVertexAttribArray(unsigned int index, bool enable) override;
 
     void BindDefaultFramebuffer() override;
+    void BindDrawFramebufferRaw(uint32_t fboId) override;
+    void BindReadFramebufferRaw(uint32_t fboId) override;
+    auto GetDrawFramebufferBindingRaw() -> uint32_t override;
+    auto GetReadFramebufferBindingRaw() -> uint32_t override;
     void CopyFramebufferToTexture(int srcX0, int srcY0, int srcX1, int srcY1,
                                   int dstX0, int dstY0, int dstWidth, int dstHeight) override;
+    void EnsureDefaultDrawBuffers() override;
+
+    void SetBoundTextureWrap(SamplerWrap wrapS, SamplerWrap wrapT) override;
 
     auto GetShaderLanguageVersion() const -> GlslVersion override;
 
