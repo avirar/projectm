@@ -1,6 +1,6 @@
 #include "Audio/Loudness.hpp"
 
-#include <cmath>
+#include <Utils.hpp>
 
 namespace libprojectM {
 namespace Audio {
@@ -40,22 +40,14 @@ void Loudness::SumBand(const std::array<float, SpectrumSamples>& spectrumSamples
 
 void Loudness::UpdateBandAverage(double secondsSinceLastFrame, uint32_t frame)
 {
-    float rate = AdjustRateToFps(m_current > m_average ? 0.2f : 0.5f, secondsSinceLastFrame);
+    float rate = Utils::AdjustRateToFps(m_current > m_average ? 0.2f : 0.5f, secondsSinceLastFrame);
     m_average = m_average * rate + m_current * (1.0f - rate);
 
-    rate = AdjustRateToFps(frame < 50 ? 0.9f : 0.992f, secondsSinceLastFrame);
+    rate = Utils::AdjustRateToFps(frame < 50 ? 0.9f : 0.992f, secondsSinceLastFrame);
     m_longAverage = m_longAverage * rate + m_current * (1.0f - rate);
 
     m_currentRelative = std::fabs(m_longAverage) < 0.001f ? 1.0f : m_current / m_longAverage;
     m_averageRelative = std::fabs(m_longAverage) < 0.001f ? 1.0f : m_average / m_longAverage;
-}
-
-auto Loudness::AdjustRateToFps(float rate, double secondsSinceLastFrame) -> float
-{
-    float const perSecondDecayRateAtFps1 = std::pow(rate, 30.0f);
-    float const perFrameDecayRateAtFps2 = std::pow(perSecondDecayRateAtFps1, static_cast<float>(secondsSinceLastFrame));
-
-    return perFrameDecayRateAtFps2;
 }
 
 } // namespace Audio

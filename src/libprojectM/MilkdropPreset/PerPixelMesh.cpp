@@ -10,6 +10,8 @@
 #include <Renderer/BlendMode.hpp>
 #include <Renderer/ShaderCache.hpp>
 
+#include <Utils.hpp>
+
 #include <algorithm>
 #include <cmath>
 
@@ -298,7 +300,8 @@ void PerPixelMesh::WarpedBlit(const PresetState& presetState,
                                  presetState.renderContext.texelOffsetY / static_cast<float>(presetState.renderContext.viewportSizeY)};
 
     // Decay
-    float decay = std::min(static_cast<float>(*perFrameContext.decay), 1.0f);
+    float rawDecay = std::min(static_cast<float>(*perFrameContext.decay), 1.0f);
+    float decay = Utils::AdjustRateToFps(rawDecay, 60.0f, presetState.renderContext.fps);
 
     // No blending between presets here, so we make sure blending is disabled.
     Renderer::BlendMode::SetBlendActive(false);

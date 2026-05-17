@@ -77,14 +77,6 @@ private:
      */
     void UpdateBandAverage(double secondsSinceLastFrame, uint32_t frame);
 
-    /**
-     * @brief Adjusts the dampening rate according to the current FPS.
-     * @param rate The rate to be dampened.
-     * @param secondsSinceLastFrame (Fractional) seconds passed since the last frame.
-     * @return The dampened rate value.
-     */
-    static auto AdjustRateToFps(float rate, double secondsSinceLastFrame) -> float;
-
     Band m_band{Band::Bass}; //!< The frequency band to use for this instance.
 
     float m_current{};     //!< The current frame's sum of all frequency strengths in the current band.
