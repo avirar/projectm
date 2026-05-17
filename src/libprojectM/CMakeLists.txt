@@ -106,9 +106,15 @@ endif()
 
 if(PROJECTM_ENABLE_VULKAN)
     find_package(Vulkan REQUIRED)
+    find_package(glslang REQUIRED)
     target_link_libraries(projectM
         PUBLIC
         Vulkan::Vulkan
+        glslang::glslang
+    )
+    target_include_directories(projectM
+        PRIVATE
+        "${PROJECT_SOURCE_DIR}/third_party/vma"
     )
     target_compile_definitions(projectM
         PUBLIC

@@ -85,6 +85,10 @@ if(PROJECTM_ENABLE_VULKAN)
         Backend/Vulkan/VkGraphicsBackend.cpp
         Backend/Vulkan/VkGraphicsBackend.hpp
     )
+    target_include_directories(Renderer
+        PRIVATE
+        "${PROJECT_SOURCE_DIR}/third_party/vma"
+    )
 endif()
 
 target_include_directories(Renderer
