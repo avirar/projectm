@@ -104,6 +104,18 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
             )
 endif()
 
+if(PROJECTM_ENABLE_VULKAN)
+    find_package(Vulkan REQUIRED)
+    target_link_libraries(projectM
+        PUBLIC
+        Vulkan::Vulkan
+    )
+    target_compile_definitions(projectM
+        PUBLIC
+        PROJECTM_ENABLE_VULKAN
+    )
+endif()
+
 set_target_properties(projectM PROPERTIES
         VERSION "${PROJECTM_LIB_VERSION}"
         SOVERSION "${PROJECTM_SO_VERSION}"

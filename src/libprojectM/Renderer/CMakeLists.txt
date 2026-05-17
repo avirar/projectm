@@ -17,6 +17,13 @@ generate_shader_resources(${CMAKE_CURRENT_BINARY_DIR}/BuiltInTransitionsResource
 
 add_library(Renderer OBJECT
         ${CMAKE_CURRENT_BINARY_DIR}/BuiltInTransitionsResources.hpp
+        Backend/GraphicsBackendFactory.cpp
+        Backend/GraphicsBackendFactory.hpp
+        Backend/GraphicsBackend.hpp
+        Backend/Types.hpp
+        Backend/Resources.hpp
+        Backend/OpenGL/GLGraphicsBackend.cpp
+        Backend/OpenGL/GLGraphicsBackend.hpp
         BlendMode.cpp
         BlendMode.hpp
         Color.hpp
@@ -72,6 +79,13 @@ add_library(Renderer OBJECT
         Platform/DynamicLibrary_emscripten.cpp
         Platform/PlatformLibraryNames.hpp
 )
+
+if(PROJECTM_ENABLE_VULKAN)
+    target_sources(Renderer PRIVATE
+        Backend/Vulkan/VkGraphicsBackend.cpp
+        Backend/Vulkan/VkGraphicsBackend.hpp
+    )
+endif()
 
 target_include_directories(Renderer
         PRIVATE
