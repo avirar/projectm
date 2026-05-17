@@ -78,6 +78,8 @@ public:
     auto GetDevice() const -> VkDevice { return m_device; }
     auto GetPhysicalDevice() const -> VkPhysicalDevice { return m_physicalDevice; }
     auto GetAllocator() const -> VmaAllocator { return m_allocator; }
+    auto GetSwapChainFormat() const -> VkFormat { return m_swapChainFormat; }
+    auto IsHDREnabled() const -> bool { return m_hdrEnabled; }
 
     void SetSurface(VkSurfaceKHR surface, int width, int height);
     void BeginFrame();
@@ -115,9 +117,14 @@ private:
     std::vector<VkImage> m_swapChainImages;
     std::vector<VkImageView> m_swapChainImageViews;
     VkFormat m_swapChainFormat{VK_FORMAT_UNDEFINED};
+    VkColorSpaceKHR m_swapChainColorSpace{VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
     VkExtent2D m_swapChainExtent{};
     int m_surfaceWidth{0};
     int m_surfaceHeight{0};
+    bool m_hdrEnabled{false};
+    bool m_hdrMetadataSupported{false};
+
+    PFN_vkSetHdrMetadataEXT m_vkSetHdrMetadataEXT{nullptr};
 
     // Pipeline state tracking
     VkViewport m_viewport{};

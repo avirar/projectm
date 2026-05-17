@@ -174,7 +174,12 @@ void VkGraphicsBackend::InitVulkan()
     CreateDevice();
     InitAllocator();
     InitCommandPool();
-Logging::Log("Vulkan backend initialized", Logging::LogLevel::Information);
+
+    // Load extension function pointers
+    m_vkSetHdrMetadataEXT = reinterpret_cast<PFN_vkSetHdrMetadataEXT>(
+        vkGetInstanceProcAddr(m_instance, "vkSetHdrMetadataEXT"));
+
+    Logging::Log("Vulkan backend initialized", Logging::LogLevel::Information);
 }
 
 void VkGraphicsBackend::CleanupVulkan()
@@ -204,6 +209,8 @@ void VkGraphicsBackend::CleanupVulkan()
 
 void VkGraphicsBackend::CreateInstance()
 {
+    std::vector<const char*> extensions(s_requiredInstanceExtensions.begin(), s_requiredInstanceExtensions.end());
+
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "projectM";
@@ -212,11 +219,30 @@ void VkGraphicsBackend::CreateInstance()
     appInfo.engineVersion = VK_MAKE_VERSION(4, 1, 0);
     appInfo.apiVersion = VK_API_VERSION_1_3;
 
+    // Check for HDR instance extensions
+    uint32_t instExtCount = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &instExtCount, nullptr);
+    std::vector<VkExtensionProperties> instExts(instExtCount);
+    vkEnumerateInstanceExtensionProperties(nullptr, &instExtCount, instExts.data());
+
+    for (const auto& hdrExt : s_instanceExtensionsHdr)
+    {
+        for (const auto& avail : instExts)
+        {
+            if (strcmp(avail.extensionName, hdrExt) == 0)
+            {
+                extensions.push_back(hdrExt);
+                Logging::Log(std::string("Vulkan: HDR instance extension enabled: ") + hdrExt, Logging::LogLevel::Information);
+                break;
+            }
+        }
+    }
+
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = &appInfo;
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(s_requiredInstanceExtensions.size());
-    createInfo.ppEnabledExtensionNames = s_requiredInstanceExtensions.data();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+    createInfo.ppEnabledExtensionNames = extensions.data();
 
 #ifdef _DEBUG
     const std::vector<const char*> validationLayers = {"VK_LAYER_KHRONOS_validation"};
@@ -265,6 +291,28 @@ void VkGraphicsBackend::CreateDevice()
         }
     }
 
+    std::vector<const char*> deviceExts(s_deviceExtensions.begin(), s_deviceExtensions.end());
+
+    // Check for HDR device extensions
+    uint32_t devExtCount = 0;
+    vkEnumerateDeviceExtensionProperties(m_physicalDevice, nullptr, &devExtCount, nullptr);
+    std::vector<VkExtensionProperties> devExts(devExtCount);
+    vkEnumerateDeviceExtensionProperties(m_physicalDevice, nullptr, &devExtCount, devExts.data());
+
+    for (const auto& hdrExt : s_deviceExtensionsHdr)
+    {
+        for (const auto& avail : devExts)
+        {
+            if (strcmp(avail.extensionName, hdrExt) == 0)
+            {
+                deviceExts.push_back(hdrExt);
+                m_hdrMetadataSupported = true;
+                Logging::Log(std::string("Vulkan: HDR device extension enabled: ") + hdrExt, Logging::LogLevel::Information);
+                break;
+            }
+        }
+    }
+
     VkDeviceQueueCreateInfo queueCreateInfo{};
     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queueCreateInfo.queueFamilyIndex = m_graphicsQueueFamily;
@@ -276,8 +324,8 @@ void VkGraphicsBackend::CreateDevice()
     createInfo.pQueueCreateInfos = &queueCreateInfo;
     createInfo.queueCreateInfoCount = 1;
     createInfo.pEnabledFeatures = &deviceFeatures;
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(s_deviceExtensions.size());
-    createInfo.ppEnabledExtensionNames = s_deviceExtensions.data();
+    createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExts.size());
+    createInfo.ppEnabledExtensionNames = deviceExts.data();
 
     if (vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device) != VK_SUCCESS)
         throw std::runtime_error("Failed to create Vulkan device");
@@ -352,14 +400,56 @@ void VkGraphicsBackend::CreateSwapChain()
     std::vector<VkSurfaceFormatKHR> formats(formatCount);
     vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface, &formatCount, formats.data());
 
+    // Default to SDR (standard 8-bit sRGB)
     m_swapChainFormat = VK_FORMAT_B8G8R8A8_UNORM;
+    m_swapChainColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    m_hdrEnabled = false;
+
+    // Try to find an HDR format, preferring FP16 scRGB linear
+    // scRGB: pixel value 1.0 = SDR white (80 nits), values >1.0 for HDR highlights
     for (auto& fmt : formats)
     {
-        if (fmt.format == VK_FORMAT_B8G8R8A8_UNORM &&
-            fmt.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if (fmt.format == VK_FORMAT_R16G16B16A16_SFLOAT &&
+            fmt.colorSpace == VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT)
         {
-            m_swapChainFormat = fmt.format;
+            m_swapChainFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
+            m_swapChainColorSpace = VK_COLOR_SPACE_EXTENDED_SRGB_LINEAR_EXT;
+            m_hdrEnabled = true;
+            Logging::Log("Vulkan: HDR FP16 scRGB swap chain selected", Logging::LogLevel::Information);
             break;
+        }
+    }
+
+    // Fallback: try 10-bit HDR10 PQ
+    if (!m_hdrEnabled)
+    {
+        for (auto& fmt : formats)
+        {
+            if (fmt.format == VK_FORMAT_A2R10G10B10_UNORM_PACK32 &&
+                fmt.colorSpace == VK_COLOR_SPACE_HDR10_ST2084_EXT)
+            {
+                m_swapChainFormat = VK_FORMAT_A2R10G10B10_UNORM_PACK32;
+                m_swapChainColorSpace = VK_COLOR_SPACE_HDR10_ST2084_EXT;
+                m_hdrEnabled = true;
+                Logging::Log("Vulkan: HDR10 PQ swap chain selected", Logging::LogLevel::Information);
+                break;
+            }
+        }
+    }
+
+    // Fallback: SDR
+    if (!m_hdrEnabled)
+    {
+        for (auto& fmt : formats)
+        {
+            if (fmt.format == VK_FORMAT_B8G8R8A8_UNORM &&
+                fmt.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+            {
+                m_swapChainFormat = fmt.format;
+                m_swapChainColorSpace = fmt.colorSpace;
+                Logging::Log("Vulkan: SDR swap chain selected", Logging::LogLevel::Information);
+                break;
+            }
         }
     }
 
@@ -379,7 +469,7 @@ void VkGraphicsBackend::CreateSwapChain()
     swapInfo.surface = m_surface;
     swapInfo.minImageCount = imageCount;
     swapInfo.imageFormat = m_swapChainFormat;
-    swapInfo.imageColorSpace = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    swapInfo.imageColorSpace = m_swapChainColorSpace;
     swapInfo.imageExtent = m_swapChainExtent;
     swapInfo.imageArrayLayers = 1;
     swapInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -412,8 +502,36 @@ void VkGraphicsBackend::CreateSwapChain()
         vkCreateImageView(m_device, &viewInfo, nullptr, &m_swapChainImageViews[i]);
     }
 
-Logging::Log("Swap chain created: " + std::to_string(m_swapChainExtent.width) + "x" +
-        std::to_string(m_swapChainExtent.height), Logging::LogLevel::Information);
+    // Set HDR metadata if supported
+    if (m_hdrEnabled && m_hdrMetadataSupported && m_vkSetHdrMetadataEXT)
+    {
+        VkHdrMetadataEXT hdrMetadata{};
+        hdrMetadata.sType = VK_STRUCTURE_TYPE_HDR_METADATA_EXT;
+
+        // SMPTE ST 2086 mastering display color volume
+        // These are typical values for a 1000-nit HDR display
+        hdrMetadata.displayPrimaryRed.x = 0.708f;
+        hdrMetadata.displayPrimaryRed.y = 0.292f;
+        hdrMetadata.displayPrimaryGreen.x = 0.170f;
+        hdrMetadata.displayPrimaryGreen.y = 0.797f;
+        hdrMetadata.displayPrimaryBlue.x = 0.131f;
+        hdrMetadata.displayPrimaryBlue.y = 0.046f;
+        hdrMetadata.whitePoint.x = 0.3127f;
+        hdrMetadata.whitePoint.y = 0.3290f;
+        hdrMetadata.maxLuminance = 1000.0f;
+        hdrMetadata.minLuminance = 0.01f;
+
+        // CTA-861.3 HDR static metadata
+        hdrMetadata.maxContentLightLevel = 1000.0f;
+        hdrMetadata.maxFrameAverageLightLevel = 400.0f;
+
+        m_vkSetHdrMetadataEXT(m_device, 1, &m_swapChain, &hdrMetadata);
+        Logging::Log("Vulkan: HDR metadata set (1000-nit display)", Logging::LogLevel::Information);
+    }
+
+    std::string chanMsg = "Swap chain created: " + std::to_string(m_swapChainExtent.width) + "x" +
+        std::to_string(m_swapChainExtent.height) + (m_hdrEnabled ? " (HDR)" : " (SDR)");
+    Logging::Log(chanMsg, Logging::LogLevel::Information);
 }
 
 void VkGraphicsBackend::DestroySwapChain()
